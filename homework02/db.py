@@ -10,15 +10,13 @@ session = sessionmaker(bind=engine)
 
 
 class News(Base):
-    """ Defines the database news """
     __tablename__ = "news"
     id = Column(Integer, primary_key=True)
     title = Column(String)
     author = Column(String)
     url = Column(String)
     complexity = Column(String)
-    habr_id = Column(String)
+    habr_id = column(String)
     label = Column(String)
-
 
 Base.metadata.create_all(bind=engine)

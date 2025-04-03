@@ -8,20 +8,12 @@
     </head>
     <body>
         <div class="ui container" style="padding-top: 10px;">
-        <tr>
-            <th colspan="14">
-                <div style="display: flex; justify-content: space-between;">
-                    <a href="/update" class="ui small primary button">Больше новостей!</a>
-                    <a href="/classify" class="ui small primary button">Разметь новые новости!</a>
-                </div>
-            </th>
-        </tr>
         <table class="ui celled table">
             <thead>
-                <th>Название</th>
-                <th>Автор</th>
-                <th>Сложность</th>
-                <th colspan="3">Метка</th>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Complexity</th>
+                <th colspan="3">Label</th>
             </thead>
             <tbody>
                 %for row in rows:
@@ -35,6 +27,13 @@
                 </tr>
                 %end
             </tbody>
+            <tfoot class="full-width">
+                <tr>
+                    <th colspan="7">
+                        <a href="/update_news" class="ui right floated small primary button">Больше новостей!</a>
+                    </th>
+                </tr>
+            </tfoot>
         </table>
         </div>
     </body>
