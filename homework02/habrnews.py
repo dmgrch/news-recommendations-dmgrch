@@ -1,3 +1,4 @@
+import os
 import string
 import nltk  # type: ignore
 import pymorphy3  # type: ignore
@@ -8,12 +9,12 @@ from sklearn.model_selection import train_test_split  # type: ignore
 from sklearn.naive_bayes import MultinomialNB  # type: ignore
 from sklearn.pipeline import Pipeline  # type: ignore
 from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
-from bottle import route, run, template, request, redirect  # type: ignore
+from bottle import route, run, template, request, redirect, TEMPLATE_PATH  # type: ignore
 from scraputils import get_news
 from db import News, session
 from bayes import NaiveBayesClassifier
 
-
+TEMPLATE_PATH.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "views")))
 nltk.download("stopwords")
 
 

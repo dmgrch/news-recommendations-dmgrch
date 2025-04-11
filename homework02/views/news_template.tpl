@@ -1,4 +1,4 @@
-<!-- news_template.tpl -->
+*<!-- news_template.tpl -->
 <!DOCTYPE html>
 <html>
     <head>
