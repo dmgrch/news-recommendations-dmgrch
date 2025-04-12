@@ -12,7 +12,7 @@
             <th colspan="14">
                 <div style="display: flex; justify-content: space-between;">
                     <a href="/update" class="ui small primary button">Больше новостей!</a>
-                    <a href="/classify" class="ui small primary button">Разметь новые новости!</a>
+                    <a href="/recommendations" class="ui small primary button">Разметь новые новости!</a>
                 </div>
             </th>
         </tr>

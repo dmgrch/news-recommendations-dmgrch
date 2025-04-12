@@ -28,7 +28,7 @@ def extract_news(parser):
                 "author": user,
                 "complexity": complexity,
                 "id": article["id"],
-                "link": link,
+                "url": link,
                 "title": article.find("a", class_="tm-title__link").text,
             }
         )

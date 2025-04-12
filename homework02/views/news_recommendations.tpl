@@ -25,10 +25,10 @@
             <tbody>
                 %for row in rows:
                 <tr>
-                    <td><a href="{{ row[2] }}">{{ row[0] }}</a></td>
-                    <td>{{ row[1] }}</td>
-                    <td>{{ row[3] }}</td>
-                    <td>{{ row[4] }}</td>
+                    <td><a href="{{ row.url }}">{{ row.title }}</a></td>
+                    <td>{{ row.author }}</td>
+                    <td>{{ row.complexity }}</td>
+                    <td>{{ row.pred_label }}</td>
                 </tr>
                 %end
             </tbody>

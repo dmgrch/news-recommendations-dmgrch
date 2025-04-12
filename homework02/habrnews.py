@@ -5,10 +5,6 @@ import pymorphy3  # type: ignore
 
 
 from nltk.corpus import stopwords  # type: ignore
-from sklearn.model_selection import train_test_split  # type: ignore
-from sklearn.naive_bayes import MultinomialNB  # type: ignore
-from sklearn.pipeline import Pipeline  # type: ignore
-from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 from bottle import route, run, template, request, redirect, TEMPLATE_PATH  # type: ignore
 from scraputils import get_news
 from db import News, session
@@ -38,28 +34,30 @@ def clean_text(text):
 @route("/news")
 def news_list():
     """Lists all unlabeled news"""
-    with session() as s:
-        rows = s.query(News).filter(News.label == None).all()
+    s = session()
+    rows = s.query(News).filter(News.label == None).all()
+    s.close()
     return template("news_template", rows=rows)
 
 
 @route("/add_label/")
 def add_label():
     """Allows you to label news"""
-    with session() as s:
-        label = request.query.label
-        news_id = request.query.id
+    s = session()
+    label = request.query.label
+    news_id = request.query.id
 
-        news = s.query(News).get(news_id)
+    news = s.query(News).get(news_id)
 
-        if label == "good":
-            news.label = "good"
-        elif label == "maybe":
-            news.label = "maybe"
-        elif label == "never":
-            news.label = "never"
+    if label == "good":
+        news.label = "good"
+    elif label == "maybe":
+        news.label = "maybe"
+    elif label == "never":
+        news.label = "never"
 
-        s.commit()
+    s.commit()
+    s.close()
 
     if __name__ == "__main__":
         redirect("/news")
@@ -68,81 +66,68 @@ def add_label():
 @route("/update")
 def update_news():
     """Checks if new news has appeared and if so, adds it to the database"""
-    with session() as s:
-        for row in get_news("https://habr.com/ru/articles/", 15):
-            existing_news = s.query(News).filter_by(title=row["title"], author=row["author"]).first()
-            if not existing_news:
-                news = News(
-                    title=row["title"],
-                    author=row["author"],
-                    url=row["link"],
-                    complexity=row["complexity"],
-                    habr_id=row["id"],
-                    label=None,
-                )
-                s.add(news)
-                s.commit()
+    s = session()
+    for row in get_news("https://habr.com/ru/articles/", 15):
+        existing_news = s.query(News).filter(News.author == row['author'], News.title == row['title']).first()
+        if not existing_news:
+            news = News(
+                title=row["title"],
+                author=row["author"],
+                url=row["url"],
+                complexity=row["complexity"],
+                habr_id=row.get("id"),
+                label=None,
+            )
+            s.add(news)
+            s.commit()
+    s.close()
 
     if __name__ == "__main__":
         redirect("/news")
 
 
-@route("/classify")
 def classify_news():
-    """Tags unlabeled news and displays them as a ranked list"""
-    # Обучение модели и проверка работоспособности в сравнении с MultinomialNB из sklearn
-    with session() as s:
-        rows = s.query(News).filter(News.label != None).all()
+    """Tags unlabeled news"""
+    # Обучение модели
+    s = session()
+    rows = s.query(News).filter(News.label != None).all()
 
-    X = clean_text(
-        [
-            row.title + " " + (row.author if row.author else "") + " " + (row.complexity if row.complexity else "")
-            for row in rows
-        ]
-    )
+    X = clean_text([row.title + " " + (row.author if row.author else "") + " " + (row.complexity if row.complexity else "") for row in rows])
     y = [row.label for row in rows]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
     model = NaiveBayesClassifier(0.05)
-    model.fit(X_train, y_train)
-    my_accuracy = model.score(X_test, y_test)
+    model.fit(X, y)
 
-    sk_model = Pipeline(
-        [
-            ("vectorizer", TfidfVectorizer()),
-            ("classifier", MultinomialNB(alpha=0.05)),
-        ]
-    )
-    sk_model.fit(X_train, y_train)
-    sk_accuracy = sk_model.score(X_test, y_test)
+    # Предсказание меток неразмеченных новостей и их ранжирование
+    rows = s.query(News).filter(News.label == None).all()
 
-    print("Алгоритмы обучились")
-    print(f"Accuracy NaiveBayesClassifier на тестовой выборке = {round(my_accuracy, 2)}")
-    print(f"Accuracy MultinomialNB на тестовой выборке = {round(sk_accuracy, 2)}")
+    X = clean_text([row.title + " " + (row.author if row.author else "") + " " + (row.complexity if row.complexity else "") for row in rows])
 
-    # Предсказание меток неразмеченных новостей
-    with session() as s:
-        rows = s.query(News).filter(News.label == None).all()
-
-    X = clean_text(
-        [
-            row.title + " " + (row.author if row.author else "") + " " + (row.complexity if row.complexity else "")
-            for row in rows
-        ]
-    )
     preds = model.predict(X)
-    labels = ["Интересно" if i == "good" else "Возможно интересно" if i == "maybe" else "Не интересно" for i in preds]
 
-    sorted_data = list(zip(labels, rows))
-    sorted_data.sort(key=lambda x: ["Интересно", "Возможно интересно", "Не интересно"].index(x[0]))
+    for news, pred in zip(rows, preds):
+        news.pred_label = pred
 
-    labels_sorted, rows_sorted = zip(*sorted_data)
-    labels_sorted = list(labels_sorted)
-    rows_sorted = list(rows_sorted)
+    label_priority = {"good": 0, "maybe": 1, "never": 2}
+    sorted_rows = sorted(rows, key=lambda x: label_priority[x.pred_label])
 
-    classified_news = []
-    for i, row in enumerate(rows_sorted):
-        classified_news.append([row.title, row.author, row.url, row.complexity, labels_sorted[i]])
+    s.close()
+
+    return sorted_rows
+
+
+@route('/recommendations')
+def recommendations():
+    """Displays news as a ranked list"""
+    classified_news = classify_news()
+
+    for news in classified_news:
+        if news.pred_label == 'good':
+            news.pred_label = 'Интересно'
+        elif news.pred_label == 'maybe':
+            news.pred_label = 'Возможно интересно'
+        else:
+            news.pred_label = 'Не интересно'
 
     return template("news_recommendations", rows=classified_news)
 
