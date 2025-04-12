@@ -57,7 +57,6 @@ def add_label():
         news.label = "never"
 
     s.commit()
-    s.close()
 
     if __name__ == "__main__":
         redirect("/news")
