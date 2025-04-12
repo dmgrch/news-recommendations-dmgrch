@@ -68,7 +68,7 @@ def update_news():
     """Checks if new news has appeared and if so, adds it to the database"""
     s = session()
     for row in get_news("https://habr.com/ru/articles/", 15):
-        existing_news = s.query(News).filter(News.author == row['author'], News.title == row['title']).first()
+        existing_news = s.query(News).filter(News.author == row["author"], News.title == row["title"]).first()
         if not existing_news:
             news = News(
                 title=row["title"],
@@ -92,7 +92,12 @@ def classify_news():
     s = session()
     rows = s.query(News).filter(News.label != None).all()
 
-    X = clean_text([row.title + " " + (row.author if row.author else "") + " " + (row.complexity if row.complexity else "") for row in rows])
+    X = clean_text(
+        [
+            row.title + " " + (row.author if row.author else "") + " " + (row.complexity if row.complexity else "")
+            for row in rows
+        ]
+    )
     y = [row.label for row in rows]
 
     model = NaiveBayesClassifier(0.05)
@@ -101,7 +106,12 @@ def classify_news():
     # Предсказание меток неразмеченных новостей и их ранжирование
     rows = s.query(News).filter(News.label == None).all()
 
-    X = clean_text([row.title + " " + (row.author if row.author else "") + " " + (row.complexity if row.complexity else "") for row in rows])
+    X = clean_text(
+        [
+            row.title + " " + (row.author if row.author else "") + " " + (row.complexity if row.complexity else "")
+            for row in rows
+        ]
+    )
 
     preds = model.predict(X)
 
@@ -116,18 +126,18 @@ def classify_news():
     return sorted_rows
 
 
-@route('/recommendations')
+@route("/recommendations")
 def recommendations():
     """Displays news as a ranked list"""
     classified_news = classify_news()
 
     for news in classified_news:
-        if news.pred_label == 'good':
-            news.pred_label = 'Интересно'
-        elif news.pred_label == 'maybe':
-            news.pred_label = 'Возможно интересно'
+        if news.pred_label == "good":
+            news.pred_label = "Интересно"
+        elif news.pred_label == "maybe":
+            news.pred_label = "Возможно интересно"
         else:
-            news.pred_label = 'Не интересно'
+            news.pred_label = "Не интересно"
 
     return template("news_recommendations", rows=classified_news)
 

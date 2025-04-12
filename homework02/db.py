@@ -12,6 +12,7 @@ session = sessionmaker(bind=engine)
 
 class News(Base):
     """Defines the database news"""
+
     __tablename__ = "news"
     id = Column(Integer, primary_key=True)
     title = Column(String)
